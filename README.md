@@ -13,6 +13,12 @@ Make sure that /etc/fuse.conf has this line:
 
     user_allow_other
 
+Make sure that
+
+    /home/projects
+
+exists and is writable by normal users.
+
 DEPENDENCIES
 ============
 

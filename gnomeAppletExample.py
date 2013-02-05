@@ -22,7 +22,7 @@ import glib
 
 from os.path import expanduser
 
-SSHFS_OPTIONS = 'idmap=user,ServerAliveInterval=10,ServerAliveCountMax=5,IdentityFile=~/.MassiveCvlKeyPair'
+SSHFS_OPTIONS = 'idmap=user,ServerAliveInterval=10,ServerAliveCountMax=5,IdentityFile=~/.MassiveCvlKeyPair,allow_other'
 
 def run_ssh_command(ssh_client, command):
     """
@@ -59,11 +59,19 @@ def current_mountpoints():
     """
     Parse the output of 'mount' to determine the user's sshfs
     mountpoints. Alternative: parse /etc/mtab.
+
+    FIXME: parse this sort of output, noting the user:
+    m2.massive.org.au:/home/projects/Desc002 on /home/projects/Desc002 type fuse.sshfs (rw,nosuid,nodev,allow_other,user=carlo)
+
     """
 
-    home = expanduser('~')
-    stdout = run_shell_command('mount')[0].split('\n')
-    return [x.split()[2] for x in stdout if home in x and 'fuse.sshfs' in x]
+    try:
+        _, _, project = read_massive_config()
+        stdout = run_shell_command('mount')[0].split('\n')
+        return [x.split()[2] for x in stdout if project in x and 'fuse.sshfs' in x]
+    except:
+        return []
+
 
 def create_keypair():
     """

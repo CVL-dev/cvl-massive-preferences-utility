@@ -1,14 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""
-Dependencies:
+#   This program is distributed under the terms of the GNU General Public License
+#   For more info see http://www.gnu.org/licenses/gpl.txt
 
-* python-gnome library
-* python-devel
-* ssh (use easy_install or pip?)
+# Based on the pysshfs utility: https://github.com/dprevite/pysshfs/blob/master/pysshfs
 
-"""
+
 
 import subprocess
 import os
@@ -16,8 +14,15 @@ import ssh
 import sys
 import pexpect
 import gtk
+import pygtk
+pygtk.require('2.0')
+
+import gnomeapplet
+import glib
 
 from os.path import expanduser
+
+SSHFS_OPTIONS = 'idmap=user,ServerAliveInterval=10,ServerAliveCountMax=5,IdentityFile=~/.MassiveCvlKeyPair'
 
 def run_ssh_command(ssh_client, command):
     """
@@ -62,7 +67,7 @@ def current_mountpoints():
 
 def create_keypair():
     """
-    Creates the keypair ~/.MassiveCvlKeyPair{,.pub}. If the keypair exists, 
+    Creates the keypair ~/.MassiveCvlKeyPair{,.pub}. If the keypair exists,
     it will be destroyed.
     """
 
@@ -160,36 +165,37 @@ def read_massive_config():
     else:
         return None
 
-import pygtk
-import sys
-pygtk.require('2.0')
-
-import gnomeapplet
-import gtk
-
-import glib
-
 def callback():
+    """
+    Example of a callback; see the commented line in factory()
+    that runs this every second.
+    """
+
     print 'called'
     return True
 
-def boo(widget, event, applet): 
-    if event.button == 1: 
+def applet_clicked(widget, event, applet):
+    if event.button == 1:
         ui = UI()
         ui.run()
         widget.emit_stop_by_name("button_press_event")
 
 def xpm_box(parent, xpm_filename):
-    box1 = gtk.HBox(False, 0)
-    box1.set_border_width(2)
+    """
+    Load an XPM into a box. Use this to create a button
+    with a pixmap.
+    """
+
+    box = gtk.HBox(False, 0)
+    box.set_border_width(2)
 
     image = gtk.Image()
     image.set_from_file(xpm_filename)
 
-    box1.pack_start(image, False, False, 3)
+    box.pack_start(image, False, False, 3)
 
     image.show()
-    return box1
+    return box
 
 def factory(applet, iid):
     icon_filename = '/home/carlo/MASSIVElogoTransparent32x32.xpm'
@@ -199,35 +205,31 @@ def factory(applet, iid):
     # button.set_label("Massive :)")
 
     # This calls our box creating function
-    box1 = xpm_box(applet, icon_filename)
+    box = xpm_box(applet, icon_filename)
 
     # Pack and show all our widgets
-    button.add(box1)
+    button.add(box)
 
-    # box1.show()
-    # button.show()
-
-    button.connect("button_press_event", boo, applet)
+    button.connect("button_press_event", applet_clicked, applet)
     applet.add(button)
     applet.show_all()
 
+    # To call callback() every second:
     # glib.timeout_add_seconds(1, callback)
 
+    # If the user already has a functioning ssh keypair, mount their project
+    # directory immediately.
     try:
         host, username, project = read_massive_config()
         if test_ssh_keypair(host, username):
-            for (dir, mountpoint) in [('/scratch/'       + project, os.getenv('HOME') + '/' + project + '_scratch'),
-                                      ('/home/projects/' + project, os.getenv('HOME') + '/' + project)]:
-                if not os.path.exists(mountpoint): os.mkdir(mountpoint)
-                ret = sshFs().mount(user=username, host=host, dir=dir, mountpoint=mountpoint)
+            dir, mountpoint = '/home/projects/' + project, os.getenv('HOME') + '/' + project
+
+            if not os.path.exists(mountpoint): os.mkdir(mountpoint)
+            ret = sshFs().mount(user=username, host=host, dir=dir, mountpoint=mountpoint)
     except:
         pass
 
     return True
-
-DEBUG = False
-
-SSHFS_OPTIONS = 'idmap=user,ServerAliveInterval=10,ServerAliveCountMax=5,IdentityFile=~/.MassiveCvlKeyPair'
 
 class UI:
     def __init__(self):
@@ -385,11 +387,11 @@ class UI:
 
         self.nmount_all()
 
-        for (dir, mountpoint) in [('/scratch/'       + project, os.getenv('HOME') + '/' + project + '_scratch'),
-                                  ('/home/projects/' + project, os.getenv('HOME') + '/' + project)]:
-            if not os.path.exists(mountpoint): os.mkdir(mountpoint)
-            ret = sshFs().mount(user=username, host=host, dir=dir, mountpoint=mountpoint)
-            print dir, mountpoint, ret # FIXME check ret?
+        dir, mountpoint = '/home/projects/' + project, os.getenv('HOME') + '/' + project
+
+        if not os.path.exists(mountpoint): os.mkdir(mountpoint)
+        ret = sshFs().mount(user=username, host=host, dir=dir, mountpoint=mountpoint)
+        print dir, mountpoint, ret # FIXME check ret?
 
         write_massive_config(host, username, project)
 
@@ -397,7 +399,6 @@ class UI:
         gtk.main()
 
     def quit(self, widget=None, data=None):
-        # gtk.main_quit()
         self.window.destroy()
 
     def unmount_all(self, widget=None, data=None):
@@ -411,10 +412,10 @@ class UI:
         project         = self.Project_entry.get_text()
 
         if test_ssh_keypair(host, username):
-            for (dir, mountpoint) in [('/scratch/'       + project, os.getenv('HOME') + '/' + project + '_scratch'),
-                                      ('/home/projects/' + project, os.getenv('HOME') + '/' + project)]:
-                if not os.path.exists(mountpoint): os.mkdir(mountpoint)
-                ret = sshFs().mount(user=username, host=host, dir=dir, mountpoint=mountpoint)
+            dir, mountpoint = '/home/projects/' + project, os.getenv('HOME') + '/' + project
+
+            if not os.path.exists(mountpoint): os.mkdir(mountpoint)
+            ret = sshFs().mount(user=username, host=host, dir=dir, mountpoint=mountpoint)
 
 ## Initialize the module.
 class sshFs:

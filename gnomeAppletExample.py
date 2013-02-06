@@ -10,6 +10,7 @@
 
 import subprocess
 import os
+import pwd
 import ssh
 import sys
 import pexpect
@@ -20,9 +21,40 @@ pygtk.require('2.0')
 import gnomeapplet
 import glib
 
-from os.path import expanduser
+from os.path import expanduser, join
 
 SSHFS_OPTIONS = 'idmap=user,ServerAliveInterval=10,ServerAliveCountMax=5,IdentityFile=~/.MassiveCvlKeyPair,allow_other'
+
+def mountpoint_of_project(project):
+    return join('/home/projects', project)
+
+def get_username():
+    return pwd.getpwuid(os.getuid()).pw_name
+
+def current_mountpoints(project):
+    """
+    Parse the output of 'mount' to determine current sshfs
+    mountpoints. Alternative: parse /etc/mtab.
+
+    Example return value:
+
+    [('/home/projects/Desc002', 'carlo')]
+
+    """
+
+    try:
+        stdout = run_shell_command('mount')[0].split('\n')
+        return [(x.split()[2], x[x.index('user='):].split(')')[0].split('=')[-1]) \
+                 for x in stdout if project in x and 'fuse.sshfs' in x]
+    except:
+        return []
+
+def mounted(project):
+    """
+    Has someone mounted this project?
+    """
+
+    return mountpoint_of_project(project) in [p[0] for p in current_mountpoints(project)]
 
 def run_ssh_command(ssh_client, command):
     """
@@ -45,32 +77,14 @@ def run_shell_command(command):
     Run a shell command. Returns stdout and stderr.
     """
 
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-    stdin=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
-    universal_newlines=True) stdout, stderr = proc.communicate()
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
+    stdout, stderr = proc.communicate()
 
     if stdout is None: stdout = ''
     if stderr is None: stderr = ''
 
     print command, stdout, stderr
     return stdout, stderr
-
-def current_mountpoints():
-    """
-    Parse the output of 'mount' to determine the user's sshfs
-    mountpoints. Alternative: parse /etc/mtab.
-
-    FIXME: parse this sort of output, noting the user:
-    m2.massive.org.au:/home/projects/Desc002 on /home/projects/Desc002 type fuse.sshfs (rw,nosuid,nodev,allow_other,user=carlo)
-
-    """
-
-    try:
-        _, _, project = read_massive_config()
-        stdout = run_shell_command('mount')[0].split('\n')
-        return [x.split()[2] for x in stdout if project in x and 'fuse.sshfs' in x]
-    except:
-        return []
 
 
 def create_keypair():
@@ -225,15 +239,16 @@ def factory(applet, iid):
     # To call callback() every second:
     # glib.timeout_add_seconds(1, callback)
 
-    # If the user already has a functioning ssh keypair, mount their project
-    # directory immediately.
+    # If the project is not mounted and the user already has a
+    # functioning ssh keypair, mount their project directory immediately.
     try:
         host, username, project = read_massive_config()
-        if test_ssh_keypair(host, username):
-            dir, mountpoint = '/home/projects/' + project, os.getenv('HOME') + '/' + project
+
+        if not mounted(project) and test_ssh_keypair(host, username):
+            mountpoint = mountpoint_of_project(project)
 
             if not os.path.exists(mountpoint): os.mkdir(mountpoint)
-            ret = sshFs().mount(user=username, host=host, dir=dir, mountpoint=mountpoint)
+            ret = sshFs().mount(user=username, host=host, dir=mountpoint, mountpoint=mountpoint)
     except:
         pass
 
@@ -393,12 +408,12 @@ class UI:
             show_msg('Keypair error: ' + str(info))
             return
 
-        self.nmount_all()
+        self.unmount_all()
 
-        dir, mountpoint = '/home/projects/' + project, os.getenv('HOME') + '/' + project
+        mountpoint = mountpoint_of_project(project)
 
         if not os.path.exists(mountpoint): os.mkdir(mountpoint)
-        ret = sshFs().mount(user=username, host=host, dir=dir, mountpoint=mountpoint)
+        ret = sshFs().mount(user=username, host=host, dir=mountpoint, mountpoint=mountpoint)
         print dir, mountpoint, ret # FIXME check ret?
 
         write_massive_config(host, username, project)
@@ -410,9 +425,12 @@ class UI:
         self.window.destroy()
 
     def unmount_all(self, widget=None, data=None):
-        for x in current_mountpoints():
-            run_shell_command('fusermount -u %s' % x)
-            run_shell_command('rmdir         %s' % x)
+        print 'Current mountpoints:', current_mountpoints(self.Project_entry.get_text())
+
+        local_username = get_username()
+        for mountpoint in [x[0] for x in current_mountpoints(self.Project_entry.get_text()) if x[1] == local_username]:
+            run_shell_command('fusermount -u %s' % mountpoint)
+            run_shell_command('rmdir         %s' % mountpoint)
 
     def mount_all(self, widget=None, data=None):
         username        = self.User_entry.get_text()
@@ -420,10 +438,10 @@ class UI:
         project         = self.Project_entry.get_text()
 
         if test_ssh_keypair(host, username):
-            dir, mountpoint = '/home/projects/' + project, os.getenv('HOME') + '/' + project
+            mountpoint = mountpoint_of_project(project)
 
             if not os.path.exists(mountpoint): os.mkdir(mountpoint)
-            ret = sshFs().mount(user=username, host=host, dir=dir, mountpoint=mountpoint)
+            ret = sshFs().mount(user=username, host=host, dir=mountpoint, mountpoint=mountpoint)
 
 ## Initialize the module.
 class sshFs:
@@ -435,7 +453,7 @@ class sshFs:
     def mount(self, user="", password="", host="", dir="", mountpoint="", port=22, timeout=120):
 
         command = "sshfs -p %s %s@%s:%s %s -o %s" % (port, user, host, dir, mountpoint, SSHFS_OPTIONS)
-        debug_info("Command : %s" % command)
+        #debug_info("Command : %s" % command)
 
         print command
 
@@ -445,14 +463,14 @@ class sshFs:
         ret = child.expect (self.initial_responses, timeout)
         ## The first reponse is to accept the key.
         if ret==0:
-            debug_info("The first reponse is to accept the key.")
+            #debug_info("The first reponse is to accept the key.")
             #~ T = child.read(100)
             child.sendline("yes")
             child.expect('password:', timeout)
             child.sendline(password)
         ## The second response sends the password.
         elif ret == 1:
-            debug_info("The second response sends the password.")
+            #debug_info("The second response sends the password.")
             child.sendline(password)
         # check for ssh bound mount - child exited and exitstatus=0
         elif child.isalive() == False:
@@ -463,7 +481,7 @@ class sshFs:
                 return (-3, 'ERROR: Unknown')
         ## Otherwise, there is an error.
         else:
-            debug_info("Otherwise, there is an error.")
+            #debug_info("Otherwise, there is an error.")
             return (-3, 'ERROR: Unknown: ' + str(child.before))
 
         ## Get the next response.
@@ -472,14 +490,14 @@ class sshFs:
 
         ## If it asks for a password, error.
         if ret == 0:
-            debug_info("If it asks for a password, error.")
+            #debug_info("If it asks for a password, error.")
             return (-4, 'ERROR: Incorrect password.')
         elif ret == 1:
-            debug_info("Otherwise we are okay.")
+            #debug_info("Otherwise we are okay.")
             return (0, str(child.after))
             ## Otherwise we are okay.
         else:
-            debug_info("Otherwise, there is an error.")
+            #debug_info("Otherwise, there is an error.")
             return (-3, 'ERROR: Unknown: ' + str(child.before))
 
 def show_msg(msg=' .. '):
@@ -487,10 +505,6 @@ def show_msg(msg=' .. '):
     message = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_OK, msg)
     resp = message.run()
     message.destroy()
-
-def debug_info(msg):
-    if DEBUG:
-        print "# %s" % msg
 
 if __name__ == '__main__':
     if sys.argv[1:] == ['--testing']:

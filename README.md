@@ -27,7 +27,6 @@ exists and is writable by normal users.
 DEPENDENCIES
 ============
 
-* python-gnome library
-* python-devel
-* ssh (use pip)
+* yum -y install gnome-python2-applet python-devel
+* easy_install pip; pip install ssh
 

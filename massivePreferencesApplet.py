@@ -519,6 +519,7 @@ if __name__ == '__main__':
         sys.exit()
     else:
         print "Starting factory"
-        gnomeapplet.bonobo_factory("OAFIID:Gnome_Panel_Example_Factory", gnomeapplet.Applet.__gtype__, "Simple gnome applet example", "1.0", factory)
+        gnomeapplet.bonobo_factory("OAFIID:CVL_MASSIVE_PREFERENCES_Factory", gnomeapplet.Applet.__gtype__, "CVL Massive Preferences", "1.0", factory)
+
 
 

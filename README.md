@@ -3,11 +3,16 @@ cvl-massive-preferences-utility
 
 Utility for mounting Massive project directories on a CVL instance.
 
-Drop gnomeAppletExample.server in
+Drop massivePreferencesApplet.server in
 
     /usr/lib/bonobo/servers
 
-and beware that gnomeAppletExample.py needs to be in /home/carlo.
+and beware that massivePreferencesApplet.py needs to be in a particular
+location (refer to massivePreferencesApplet.server).
+
+The string 'CVLMASSIVEPREFERENCESVERSION' in
+massivePreferencesApplet.server needs to be changed to the version
+number of the installed package.
 
 Make sure that /etc/fuse.conf has this line:
 

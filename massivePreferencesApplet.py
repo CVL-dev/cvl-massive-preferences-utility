@@ -220,7 +220,7 @@ def xpm_box(parent, xpm_filename):
     return box
 
 def factory(applet, iid):
-    icon_filename = '/home/carlo/MASSIVElogoTransparent32x32.xpm'
+    icon_filename = '/home/carlo/cvl-massive-preferences-utility/MASSIVElogoTransparent32x32.xpm' 
 
     button = gtk.Button()
     button.set_relief(gtk.RELIEF_NONE)

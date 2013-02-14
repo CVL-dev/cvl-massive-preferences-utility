@@ -8,4 +8,8 @@ easy_install pip
 pip install ssh
 
 
+mkdir /home/projects
+chmod a+rwx /home/projects
+
+echo "user_allow_other" > /etc/fuse.conf
 

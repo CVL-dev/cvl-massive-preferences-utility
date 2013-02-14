@@ -13,6 +13,7 @@ import os
 import pwd
 import ssh
 import sys
+import glob
 import pexpect
 import gtk
 import pygtk
@@ -220,7 +221,12 @@ def xpm_box(parent, xpm_filename):
     return box
 
 def factory(applet, iid):
-    icon_filename = '/home/carlo/cvl-massive-preferences-utility/MASSIVElogoTransparent32x32.xpm' 
+    icon_files = glob.glob('/usr/local/massive-preferences/*/massive-preferences/lib/MASSIVElogoTransparent32x32.xpm')
+
+    if len(icon_files) == 1:
+        icon_filename = icon_files[0]
+    else:
+        icon_filename = ''
 
     button = gtk.Button()
     button.set_relief(gtk.RELIEF_NONE)

@@ -8,9 +8,12 @@ rm -fr massive-preferences
 mkdir massive-preferences
 mkdir massive-preferences/bin
 mkdir massive-preferences/lib
+mkdir massive-preferences/etc
 
 cp massivePreferencesApplet.py massive-preferences/bin/
 cp MASSIVElogoTransparent32x32.xpm massivePreferencesApplet.server massive-preferences/lib
+cp -vr etc massive-preferences
+
 touch massive-preferences/readme.txt
 cd massive-preferences/lib
 sed -i "s/CVLMASSIVEPREFERENCESVERSION/${VERSION}/g" massivePreferencesApplet.server 

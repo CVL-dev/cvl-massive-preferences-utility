@@ -1,0 +1,5 @@
+[xfapplet]
+iid=OAFIID:Gnome_Panel_Example
+name=CVL Massive Preferences
+gconfkey=/apps/xfapplet/applet_0
+

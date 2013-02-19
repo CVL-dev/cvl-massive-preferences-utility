@@ -1,0 +1,11 @@
+
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Massive Preferences
+Comment=
+Exec=/usr/local/massive-preferences/CVLMASSIVEPREFERENCESVERSION/massive-preferences/bin/massive_preferences.py
+Icon=/usr/local/massive-preferences/CVLMASSIVEPREFERENCESVERSION/massive-preferences/lib/MASSIVElogoTransparent32x32.xpm
+Path=
+Terminal=false
+StartupNotify=false

@@ -10,8 +10,8 @@ mkdir massive-preferences/bin
 mkdir massive-preferences/lib
 mkdir massive-preferences/etc
 
-cp massivePreferencesApplet.py massive-preferences/bin/
-cp MASSIVElogoTransparent32x32.xpm massivePreferencesApplet.server Massive*.desktopmassive-preferences/lib
+cp *.py massive-preferences/bin/
+cp MASSIVElogoTransparent32x32.xpm massivePreferencesApplet.server Massive*.desktop massive-preferences/lib
 cp -vr etc massive-preferences
 
 touch massive-preferences/readme.txt

@@ -261,7 +261,9 @@ def factory(applet, iid):
     return True
 
 class UI:
-    def __init__(self):
+    def __init__(self, standalone=False):
+        self.standalone = standalone
+
         # Create window
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_title("Massive Preferences")
@@ -429,6 +431,9 @@ class UI:
 
     def quit(self, widget=None, data=None):
         self.window.destroy()
+
+        if self.standalone:
+            gtk.main_quit()
 
     def unmount_all(self, widget=None, data=None):
         print 'Current mountpoints:', current_mountpoints(self.Project_entry.get_text())
